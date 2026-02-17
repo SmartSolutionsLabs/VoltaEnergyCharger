@@ -17,7 +17,14 @@ std::string CommandManager::execute(std::string cmd) {
     if (cmd.empty()) return "";
 
     ESP_LOGI(TAG, "Ejecutando: %s", cmd.c_str());
-
+    // Pseudocódigo para añadir en CommandManager.cpp
+    if (cmd.find("charge.ch") != std::string::npos) {
+        // Lógica para extraer el canal y los minutos del string
+        // Ejemplo: moto_points[0].seconds_left = 60 * 60;
+        // moto_points[0].active = true;
+        // g_mcp_1->digital_write(0, true);
+        return "SUCCESS: Iniciando carga CH1 por 60 min";
+    }
     if (cmd == "log.show") {
         return dumpLogs();
     } 

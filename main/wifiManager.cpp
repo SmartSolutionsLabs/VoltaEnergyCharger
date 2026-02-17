@@ -173,7 +173,7 @@ void WifiManager::start_ap() {
     esp_wifi_init(&cfg);
 
     wifi_config_t ap_config = {};
-    strcpy((char*)ap_config.ap.ssid, "RECTIFICADOR_S3_CFG");
+    strcpy((char*)ap_config.ap.ssid, "Volta Energy Charger");
     ap_config.ap.channel = 1;
     ap_config.ap.max_connection = 4;
     ap_config.ap.authmode = WIFI_AUTH_OPEN;

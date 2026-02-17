@@ -3,7 +3,6 @@ idf_component_register(
         "main.cpp" 
         "ads1115.cpp" 
         "mcp23017.cpp" 
-        "ina226.cpp"
         "WifiManager.cpp"
         "GitHubClient.cpp"
         "PortalWeb.cpp"
