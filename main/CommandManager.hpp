@@ -3,22 +3,38 @@
 
 #include <string>
 #include <vector>
+#include <map>
+#include <memory>
 #include <algorithm>
-#include "LoggerFS.hpp"
+
+/**
+ * @brief Interfaz abstracta (Clase Base).
+ * Cualquier comando nuevo debe heredar de aquí.
+ */
+class Command {
+public:
+    virtual ~Command() {}
+    // El método que cada comando implementará con su propia lógica
+    virtual std::string execute(const std::vector<std::string>& args) = 0;
+};
 
 class CommandManager {
 public:
     /**
-     * @brief Procesa un comando de texto y retorna la respuesta.
-     * @param cmd Cadena de texto recibida (Serial, WiFi, BT)
-     * @return std::string Respuesta para el canal emisor
+     * @brief Registra un comando.
+     * @param name Palabra clave (ej: "charge")
+     * @param cmd Instancia de la clase que ejecuta la lógica.
      */
-    static std::string execute(std::string cmd);
+    static void addCommand(const std::string& name, std::unique_ptr<Command> cmd);
+    
+    /**
+     * @brief Procesa texto desde cualquier canal (Serial, Web, BT).
+     */
+    static std::string run(std::string input);
 
 private:
-    // Métodos internos de procesamiento
-    static std::string dumpLogs();
-    static std::string getSystemStats();
+    static std::map<std::string, std::unique_ptr<Command>> _commands;
+    static std::vector<std::string> split(const std::string& s, char delimiter);
     static void sanitize(std::string &s);
 };
 

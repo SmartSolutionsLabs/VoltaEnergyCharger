@@ -1,75 +1,35 @@
 #include "CommandManager.hpp"
-#include <cstdio>
-#include "esp_log.h"
+#include <sstream>
 
-extern LoggerFS g_logger;
+std::map<std::string, std::unique_ptr<Command>> CommandManager::_commands;
 
-// Variables externas para reporte de estado
-extern float g_corriente_actual;
-extern int g_potenciometro_mv;
-extern bool g_scr_enabled;
+void CommandManager::addCommand(const std::string& name, std::unique_ptr<Command> cmd) {
+    _commands[name] = std::move(cmd);
+}
 
-static const char* TAG = "CMD_MGR";
+std::string CommandManager::run(std::string input) {
+    sanitize(input);
+    if (input.empty()) return "";
 
-std::string CommandManager::execute(std::string cmd) {
-    sanitize(cmd);
-    
-    if (cmd.empty()) return "";
+    auto parts = split(input, '.'); // Separador por puntos
+    if (parts.empty()) return "ERROR: Empty input";
 
-    ESP_LOGI(TAG, "Ejecutando: %s", cmd.c_str());
-    // Pseudocódigo para añadir en CommandManager.cpp
-    if (cmd.find("charge.ch") != std::string::npos) {
-        // Lógica para extraer el canal y los minutos del string
-        // Ejemplo: moto_points[0].seconds_left = 60 * 60;
-        // moto_points[0].active = true;
-        // g_mcp_1->digital_write(0, true);
-        return "SUCCESS: Iniciando carga CH1 por 60 min";
+    std::string name = parts[0];
+    if (_commands.count(name)) {
+        return _commands[name]->execute(parts); // Aquí ocurre el polimorfismo
     }
-    if (cmd == "log.show") {
-        return dumpLogs();
-    } 
-    // Dentro de CommandManager::execute
-    else if (cmd == "log.clear") {
-        g_logger.limpiarLog(); 
-        return "SUCCESS: Historial reiniciado. Registro de borrado generado.";
-    }
-    else if (cmd == "stats") {
-        return getSystemStats();
-    }
-    else if (cmd == "help") {
-        return "\n--- COMANDOS RECTIFICADOR ---\n"
-               "log.show  : Muestra logs CSV\n"
-               "log.clear : Borra logs\n"
-               "stats     : Estado actual\n"
-               "-----------------------------\n";
-    }
+    return "ERROR: Command '" + name + "' not found";
+}
 
-    return "ERROR: Comando '" + cmd + "' no reconocido. Escriba 'help'.";
+std::vector<std::string> CommandManager::split(const std::string& s, char delimiter) {
+    std::vector<std::string> tokens;
+    std::string token;
+    std::istringstream tokenStream(s);
+    while (std::getline(tokenStream, token, delimiter)) tokens.push_back(token);
+    return tokens;
 }
 
 void CommandManager::sanitize(std::string &s) {
     s.erase(std::remove(s.begin(), s.end(), '\n'), s.end());
     s.erase(std::remove(s.begin(), s.end(), '\r'), s.end());
-}
-
-std::string CommandManager::getSystemStats() {
-    char buf[128];
-    snprintf(buf, sizeof(buf), "STATS: Pot:%d mV | Amp:%.1f A | SCR:%s", 
-             g_potenciometro_mv, g_corriente_actual, g_scr_enabled ? "ON" : "OFF");
-    return std::string(buf);
-}
-
-std::string CommandManager::dumpLogs() {
-    extern LoggerFS g_logger;
-    FILE* f = fopen(g_logger.getFilePath().c_str(), "r");
-    if (f == NULL) return "ERROR: No se pudo leer el archivo de logs.";
-
-    std::string res = "\n>>> INICIO LOG CSV <<<\n";
-    char line[128];
-    while (fgets(line, sizeof(line), f)) {
-        res += line;
-    }
-    res += ">>> FIN LOG CSV <<<\n";
-    fclose(f);
-    return res;
 }
