@@ -12,6 +12,8 @@ idf_component_register(
     EMBED_TXTFILES 
         "github_root_ca.pem" 
         "index.html"
+    PRIV_REQUIRES 
+        esp-modbus
     REQUIRES 
         esp_adc
         driver 
