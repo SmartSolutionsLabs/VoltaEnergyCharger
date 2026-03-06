@@ -1,22 +1,25 @@
-#pragma once
+#ifndef MODBUS_SLAVE_HPP
+#define MODBUS_SLAVE_HPP
+
 #include "mbcontroller.h"
-#include "driver/uart.h"
+#include "esp_modbus_slave.h"
 #include "SlaveParameters.hpp"
 
 class ModbusSlave {
 public:
     ModbusSlave(uint8_t unitId);
     
-    // Inicializa la UART (38/48) y el controlador Modbus
+    // Tu inicialización que funciona
     esp_err_t init(int txPin, int rxPin, uint32_t baudrate);
     
-    // Vincula los structs del main con el stack de Modbus
-    esp_err_t setup_reg_maps(input_reg_params_t* inputs, holding_reg_params_t* holdings);
-    
+    // Función dinámica para registrar CUALQUIER estructura
+    esp_err_t register_area(mb_param_type_t type, uint16_t offset, void* ptr, size_t size);
+
     void* getContext() { return m_slaveHandle; }
 
 private:
     uint8_t m_unitId;
     void* m_slaveHandle;
-    // Ya no necesitamos m_regs; usamos los punteros pasados en setup_reg_maps
 };
+
+#endif
