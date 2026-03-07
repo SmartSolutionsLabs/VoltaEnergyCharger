@@ -12,14 +12,9 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-enum class SignatureWorkStatus : uint16_t{
-    IDLE = 1,
-    PROCESSING = 2,
-    DONE = 3,
-    ERROR = 4 
-};
+#include "IPaymentProcessor.hpp"
 
-class OfflinePayment {
+class OfflinePayment : public IPaymentProcessor {
 private:
     static inline uint8_t LLAVE_MAESTRA[32] = { 
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 
@@ -30,18 +25,19 @@ private:
 
     static constexpr const char* IDENTIDAD = "VOLTA_CHG_001";
 
-    static volatile SignatureWorkStatus work_status = SignatureWorkStatus::IDLE; //
-
-    static volatile uint8_t signature[64] = {0};
+    volatile SignatureWorkStatus work_status{SignatureWorkStatus::IDLE}; //
+    volatile uint8_t signature[64] = {0};
+    
+    static void internalTaskWrapper(void* pvParameters);
 
 public:
      OfflinePayment();
-    ~OfflinePayment();
-    bool buildSignature(uint16_t id, uint16_t min, uint32_t price, );
+    ~OfflinePayment() override;
+    bool buildSignature(uint16_t id, uint16_t min, uint32_t price, uint8_t* sig_out);
     bool getOTP(uint16_t id, uint16_t min, uint32_t price, uint8_t* otp_out);
 
-    SignatureWorkStatus getWorkStatus();
-    bool getSignature();
+    void buildSignatureAsync(uint16_t id, uint16_t min, uint32_t price, uint8_t* sig_out, uint16_t* status_out) override;
+    SignatureWorkStatus getWorkStatus() override;
 
 
 };

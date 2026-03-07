@@ -1,4 +1,14 @@
 #include "OfflinePayment.hpp"
+#include "esp_random.h"
+
+struct TaskArgs {
+    OfflinePayment* instance;
+    uint16_t id;
+    uint16_t min;
+    uint32_t price;
+    uint8_t* sig_out;
+    uint16_t* status_out;
+};
 
 
 OfflinePayment::OfflinePayment() {
@@ -11,16 +21,14 @@ OfflinePayment::~OfflinePayment() {
 
 
 void OfflinePayment::buildSignatureAsync(uint16_t id, uint16_t min, uint32_t price, uint8_t* sig_out, uint16_t* status_out) {
-    if (done_flag) *status_out = false;
-
     // Empaquetamos los argumentos
     TaskArgs* args = new TaskArgs{
-        .instance = this,
-        .id = id,
-        .min = min,
-        .price = price,
-        .sig_out = sig_out,
-        .done_flag = status_out
+        this,
+        id,
+        min,
+        price,
+        sig_out,
+        status_out
     };
 
     // Lanzamos la tarea de FreeRTOS
@@ -36,19 +44,24 @@ void OfflinePayment::buildSignatureAsync(uint16_t id, uint16_t min, uint32_t pri
 
 void OfflinePayment::internalTaskWrapper(void* pvParameters) {
     TaskArgs* args = (TaskArgs*)pvParameters;
-    this->work_status = SignatureWorkStatus::PROCESSING;
-    args->work_status = this->work_status;
+    args->instance->work_status = SignatureWorkStatus::PROCESSING;
+    if (args->status_out) {
+        *args->status_out = static_cast<uint16_t>(args->instance->work_status);
+    }
+
     // Llamamos al método original de la instancia
     bool success = args->instance->buildSignature(args->id, args->min, args->price, args->sig_out); // 350 ms
 
     // Si hay una bandera de "listo", la activamos
     if(success){
-        this->work_status = SignatureWorkStatus::DONE;
-        args->work_status = this->work_status;
+        args->instance->work_status = SignatureWorkStatus::DONE;
     }
     else{
-        this->work_status = SignatureWorkStatus::ERROR;
-        args->work_status = this->work_status;
+        args->instance->work_status = SignatureWorkStatus::ERROR;
+    }
+
+    if (args->status_out) {
+        *args->status_out = static_cast<uint16_t>(args->instance->work_status);
     }
 
     // Limpieza de memoria y eliminación de la tarea
