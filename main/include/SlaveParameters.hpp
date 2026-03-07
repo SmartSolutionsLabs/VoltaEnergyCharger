@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define MAX_TERMINALS 10
+
 #pragma pack(push, 1)
 
 typedef struct {                 // 0x0000
@@ -43,7 +45,17 @@ typedef struct{                 // 0x0400
     uint16_t max_charge_time;
     uint16_t step_charge_time;
 } input_attributes_response_t;
+ 
+typedef struct{                //ESTRUCTURA USADA EN EL 0X0500
+    uint16_t status;
+    uint16_t remaining_time;
+    uint16_t used_energy;
+} terminal_status_block_t;
 
+typedef struct{                // 0X0500
+    terminal_status_block_t terminals[MAX_TERMINALS];
+} input_all_status_response_t;
 
 #pragma pack(pop)
+
 #endif
