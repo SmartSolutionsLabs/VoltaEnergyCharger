@@ -93,7 +93,7 @@ void task_process_signature(void *pvParameters) {
         // En ESP32 esto es seguro si el maestro asume que está PROCESSING hasta ver DONE
         memcpy(mb_in_terminal_price_response.signature, temp_signature, 64);
         mb_in_terminal_price_response.terminal_id = id;
-        mb_in_terminal_price_response.price = price;
+        mb_in_terminal_price_response.price = req_minutes * mb_in_attributes_response.minute_value;
         
         otps_esperados[idx] = esp_random() % 1000000;
         minutos_por_puerto[idx] = req_minutes;
