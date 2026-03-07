@@ -15,8 +15,9 @@ public:
     ChargePointDevice(uint8_t terminalId, MCP23017* hwExpander);
     ~ChargePointDevice();
 
-    void setExpectedOtp(uint32_t otp);
+    void setExpectedOtp(uint32_t otp, uint16_t expectedMinutes);
     bool validateOtp(uint32_t pin);
+    uint16_t getExpectedMinutes() const;
     void startCharge(uint16_t minutes);
     void stopCharge();
 
@@ -29,6 +30,7 @@ private:
     ChargePointStatus m_status;
     MCP23017* m_hwExpander;
     uint32_t m_currentOtp;
+    uint16_t m_expectedMinutes;
 
     static void taskControlCargaWrapper(void* pvParameters);
     void runChargeCycle(uint16_t minutes);
