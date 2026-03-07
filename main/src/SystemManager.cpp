@@ -106,6 +106,7 @@ void SystemManager::onPriceRequest(uint16_t terminalId, uint16_t minutes) {
 
     // Generate a valid OTP
     uint32_t otp = esp_random() % 1000000;
+    ESP_LOGI(TAG, "🔑 [P%d] PIN GENERADO: %06lu", terminalId, otp);
     m_chargePoints[terminalId - 1]->setExpectedOtp(otp);
 
     // Call async payment
