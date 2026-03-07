@@ -109,11 +109,15 @@ void SystemManager::onPriceRequest(uint16_t terminalId, uint16_t minutes) {
     ESP_LOGI(TAG, "🔑 [P%d] PIN GENERADO: %06lu", terminalId, otp);
     m_chargePoints[terminalId - 1]->setExpectedOtp(otp);
 
-    // Call async payment
+    // Calculate expected price based on incoming minutes and the configured minute value
+    uint32_t calculatedPrice = minutes * map.attr_res.minute_value;
+    map.price_res.terminal_id = terminalId;
+    map.price_res.price = calculatedPrice;
+
     m_paymentProcessor->buildSignatureAsync(
         terminalId, 
         minutes, 
-        1500, // Price mocked 
+        calculatedPrice,
         map.price_res.signature,
         &map.status_res.work_status
     );
