@@ -106,8 +106,8 @@ void SystemManager::onPriceRequest(uint16_t terminalId, uint16_t minutes) {
 
     // Generate a valid OTP
     uint32_t otp = esp_random() % 1000000;
-    ESP_LOGI(TAG, "🔑 [P%d] PIN GENERADO: %06lu", terminalId, otp);
-    m_chargePoints[terminalId - 1]->setExpectedOtp(otp);
+    ESP_LOGI(TAG, "🔑 [P%d] PIN GENERADO: %06lu, Tiempo: %d min", terminalId, otp, minutes);
+    m_chargePoints[terminalId - 1]->setExpectedOtp(otp, minutes);
 
     // Calculate expected price based on incoming minutes and the configured minute value
     uint32_t calculatedPrice = minutes * map.attr_res.minute_value;
@@ -140,9 +140,11 @@ void SystemManager::onPinValidationRequest(uint16_t terminalId, uint32_t pin) {
         map.pin_res.valid_pin = 1;
         map.status_res.work_status = static_cast<uint16_t>(SignatureWorkStatus::DONE);
         
-        // Use 5 minutes as fallback if we don't store requested time, but usually we'd track it.
-        // For testing, just hardcode 5 or use a stored value. main.cpp used 5 directly in task creation.
-        m_chargePoints[terminalId - 1]->startCharge(5); 
+        // Fetch the originally requested minutes for this terminal
+        uint16_t mins = m_chargePoints[terminalId - 1]->getExpectedMinutes();
+        if (mins == 0) mins = 5; // fallback just in case
+        
+        m_chargePoints[terminalId - 1]->startCharge(mins); 
 
     } else {
         ESP_LOGE(TAG, "❌ PIN INCORRECTO P%d", terminalId);
