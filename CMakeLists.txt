@@ -1,8 +1,6 @@
-cmake_minimum_required(VERSION 3.16.0)
+cmake_minimum_required(VERSION 3.16)
 
-# Aquí defines la versión global del proyecto
-set(PROJECT_VER "1.0.0")
-
+# Esto es vital para que el Component Manager funcione
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(VoltaEnergyCharger)
 
+project(VoltaEnergyCharger)

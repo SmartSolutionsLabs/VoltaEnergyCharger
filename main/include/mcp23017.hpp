@@ -7,7 +7,7 @@ private:
     i2c_port_t m_port;
     uint8_t m_addr;
     static const char* TAG;
-
+    
     // Registros MCP23017
     enum Registers {
         IODIRA = 0x00, IODIRB = 0x01,
@@ -27,6 +27,8 @@ private:
     bool read_register(uint8_t reg, uint8_t& value);
 
 public:
+    static const bool HIGH = 1;
+    static const bool LOW = 0;
     MCP23017(i2c_port_t port, uint8_t addr = 0x20);
     ~MCP23017();
 
