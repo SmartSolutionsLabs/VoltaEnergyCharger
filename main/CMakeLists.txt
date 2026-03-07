@@ -5,6 +5,7 @@ idf_component_register(
         "src/ControlBoardProxy.cpp"
         "src/ModbusSlave.cpp"
         "src/MCP23017.cpp"
+        "src/OfflinePayment.cpp"
     INCLUDE_DIRS 
         "include"
     REQUIRES espressif__esp-modbus driver mbedtls esp_timer efuse nvs_flash

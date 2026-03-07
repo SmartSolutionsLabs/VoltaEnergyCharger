@@ -12,17 +12,13 @@
 #include "ModbusSlave.hpp"
 #include "MCP23017.hpp"
 
-// Criptografía
-#include "mbedtls/ecdsa.h"
-#include "mbedtls/sha256.h"
-#include "mbedtls/entropy.h"
-#include "mbedtls/ctr_drbg.h"
-
+#include "OfflinePayment.hpp"  // clase para la generacion de firma y OTP
 #include "ChargePoint.hpp"
 
 static const char* TAG = "VOLTA_MAIN";
 #define NUM_TERMINALES 8
 
+OfflinePayment payment;
 // --- HARDWARE ---
 #define MCP_ENABLE_PIN GPIO_NUM_15
 #define MCP_EXTRA_PIN  GPIO_NUM_41
@@ -37,40 +33,9 @@ input_terminal_valid_pin_response_t     mb_in_terminal_valid_pin_response;     /
 input_charge_point_status_response_t    mb_in_charge_point_status_response;    // 0x0300
 input_attributes_response_t             mb_in_attributes_response;             // 0x0400 
 
-static const char* IDENTIDAD = "VOLTA_CHG_001";
-static uint8_t LLAVE_MAESTRA[32] = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38 };
-
-
 uint32_t otps_esperados[NUM_TERMINALES] = {0};
 uint16_t minutos_por_puerto[NUM_TERMINALES] = {0};
 MCP23017* MCP = nullptr;
-
-// Función de Firma Real (Sin simulaciones)
-bool generar_firma_real(uint16_t id, uint16_t min, uint32_t price, uint8_t* sig_out) {
-    mbedtls_ecdsa_context ecdsa;
-    mbedtls_entropy_context entropy;
-    mbedtls_ctr_drbg_context ctr_drbg;
-    mbedtls_ecdsa_init(&ecdsa);
-    mbedtls_entropy_init(&entropy);
-    mbedtls_ctr_drbg_init(&ctr_drbg);
-    mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char *)"v_rng", 5);
-    
-    mbedtls_ecp_group_load(&ecdsa.MBEDTLS_PRIVATE(grp), MBEDTLS_ECP_DP_SECP256R1);
-    mbedtls_mpi_read_binary(&ecdsa.MBEDTLS_PRIVATE(d), LLAVE_MAESTRA, 32);
-    
-    uint8_t hash[32];
-    mbedtls_sha256((const unsigned char*)IDENTIDAD, strlen(IDENTIDAD), hash, 0);
-
-    mbedtls_mpi r, s;
-    mbedtls_mpi_init(&r); mbedtls_mpi_init(&s);
-    int ret = mbedtls_ecdsa_sign(&ecdsa.MBEDTLS_PRIVATE(grp), &r, &s, &ecdsa.MBEDTLS_PRIVATE(d), hash, 32, mbedtls_ctr_drbg_random, &ctr_drbg);
-    if (ret == 0) {
-        mbedtls_mpi_write_binary(&r, sig_out, 32);
-        mbedtls_mpi_write_binary(&s, sig_out + 32, 32);
-    }
-    mbedtls_ecdsa_free(&ecdsa); mbedtls_ctr_drbg_free(&ctr_drbg); mbedtls_entropy_free(&entropy);
-    return (ret == 0);
-}
 
 struct SignatureTaskParams {
     uint16_t id;
@@ -78,37 +43,6 @@ struct SignatureTaskParams {
     uint16_t req_minutes;
 };
 
-void task_process_signature(void *pvParameters) {
-    SignatureTaskParams* params = (SignatureTaskParams*)pvParameters;
-    uint16_t id = params->id;
-    uint16_t idx = id - 1;
-    uint16_t req_minutes = params->req_minutes;
-    uint32_t price = params->price;
-    delete params; // Liberamos memoria dinámica
-
-    ESP_LOGI(TAG, "⚙️ [P%d] Generando firma ECDSA en background...", id);
-
-    uint8_t temp_signature[64];
-    if (generar_firma_real(id, req_minutes, price, temp_signature)) {
-        // En ESP32 esto es seguro si el maestro asume que está PROCESSING hasta ver DONE
-        memcpy(mb_in_terminal_price_response.signature, temp_signature, 64);
-        mb_in_terminal_price_response.terminal_id = id;
-        mb_in_terminal_price_response.price = req_minutes * mb_in_attributes_response.minute_value;
-        
-        otps_esperados[idx] = esp_random() % 1000000;
-        minutos_por_puerto[idx] = req_minutes;
-
-        ESP_LOGW(TAG, "🔑 OTP GENERADO [P%d]: %06lu", id, otps_esperados[idx]);
-        
-        // Estado DONE (3) indicando al maestro que ya tiene los datos completos
-        mb_in_terminal_status_response.work_status = static_cast<uint16_t>(ChargeWorkMode::DONE); 
-        ESP_LOGI(TAG, "✅ [P%d] Firma completada, estado actualizado a DONE", id);
-    } else {
-        mb_in_terminal_status_response.work_status = static_cast<uint16_t>(ChargeWorkMode::ERROR); // ERROR
-        ESP_LOGE(TAG, "❌ [P%d] Error al generar firma", id);
-    }
-    vTaskDelete(NULL);
-}
 
 void task_control_carga(void *pvParameters) {
     uint16_t puerto = (uint16_t)(uintptr_t)pvParameters;
@@ -154,7 +88,13 @@ extern "C" void app_main() {
     conf.master.clk_speed = 400000;
     conf.clk_flags = 0; 
 
-    gpio_config_t io = { .pin_bit_mask = (1ULL<<MCP_ENABLE_PIN)|(1ULL<<MCP_EXTRA_PIN), .mode = GPIO_MODE_OUTPUT };
+    gpio_config_t io = {
+        .pin_bit_mask = (1ULL << MCP_ENABLE_PIN) | (1ULL << MCP_EXTRA_PIN),
+        .mode         = GPIO_MODE_OUTPUT,
+        .pull_up_en   = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type    = GPIO_INTR_DISABLE
+    };
     gpio_config(&io);
     gpio_set_level(MCP_ENABLE_PIN, 1);
     gpio_set_level(MCP_EXTRA_PIN, 1);
@@ -230,8 +170,9 @@ extern "C" void app_main() {
                         mb_in_terminal_status_response.work_status = static_cast<uint16_t>(ChargeWorkMode::PROCESSING); // PROCESSING
 
                         // Lanzamos la tarea de firma en background (8192 bytes de stack para la criptografía)
-                        SignatureTaskParams* params = new SignatureTaskParams{id, 1500, mb_hld_terminal_price_request.req_minutes};
-                        xTaskCreate(task_process_signature, "sig_gen", 8192, (void*)params, 5, NULL);
+                        payment.buildSignatureAsync(id, mb_hld_terminal_price_request.req_minutes, 1500 ,
+                                                    mb_in_terminal_price_response.signature,
+                                                    mb_in_terminal_status_response.work_status);
 
                         mb_hld_terminal_price_request.req_minutes = 0;
                     }
@@ -274,6 +215,13 @@ extern "C" void app_main() {
                 ESP_LOGW(TAG, "🔍 [DETALLE LEÍDO] Terminal ID: %d, status: %lu", 
                          mb_in_terminal_status_response.terminal_id, 
                          mb_in_terminal_status_response.work_status);
+
+                if(payment.getSignatureStatus()){
+                    mb_in_terminal_status_response.work_status = payment.getSignatureStatus(); // true false
+                    mb_in_terminal_price_response.signature = 1500;
+                }
+                
+                         
             } 
             else if(addr >= 0x0100 && addr < 0x0200){
                 ESP_LOGI(TAG, "📤 [READ] Maestro pidiendo FIRMA/PRECIO (Offset: 0x%04X)", addr);
