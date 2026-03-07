@@ -4,11 +4,19 @@
 /**
  * @brief Estado de un punto de carga.
  */
-enum class ChargePointStatus : uint8_t {
-	AVAILABLE,      ///< Libre y listo para usar
-	OCCUPIED,       ///< En uso
-	FAULT,          ///< Error de hardware
-	OUT_OF_SERVICE  ///< Fuera de servicio / deshabilitado
+enum class ChargeWorkMode : uint16_t{
+    UNKNOWN = 0,
+    IDLE = 1,
+    PROCESSING = 2,
+    DONE = 3,
+    ERROR = 4 
+};
+
+enum class ChargePointStatus : uint16_t{
+    AVAILABLE,
+    OCCUPIED,
+    FAULT,
+    OUT_OF_SERVICE
 };
 
 /**

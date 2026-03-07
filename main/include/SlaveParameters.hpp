@@ -5,25 +5,45 @@
 
 #pragma pack(push, 1)
 
-// Estructura para Input Registers (Lectura desde el Maestro)
-typedef struct {
-    uint16_t terminal_id;    // 0x0000
-    uint8_t  signature[64];  // 0x0001 - 0x0020 (32 regs)
-    uint32_t price;          // 0x0021 - 0x0022
-    uint16_t status;         // 0x0023
-    uint16_t elapsed_time;   // 0x0024
-    uint16_t energy;         // 0x0025
-} input_reg_params_t;
+typedef struct {                 // 0x0000
+    uint16_t terminal_id;
+    uint16_t req_minutes;
+} holding_terminal_price_request_t;
 
-// Estructura para Holding Registers (Escritura desde el Maestro)
-typedef struct {
-    uint16_t terminal_id;    // 0x0000
-    uint16_t req_minutes;    // 0x0001
-    uint32_t user_pin;       // 0x0002 - 0x0003
-    uint16_t enable_point;   // 0x0004
-    uint32_t unit_price;     // 0x0005 - 0x0006
-} holding_reg_params_t;
+typedef struct {                // 0x0000
+    uint16_t terminal_id;
+    uint16_t work_status; 
+} input_terminal_status_response_t;
+
+typedef struct {                // 0x1000
+    uint16_t terminal_id;
+    uint32_t price;
+    uint8_t  signature[64];
+} input_terminal_price_response_t;
+
+typedef struct {                // 0x0100
+    uint16_t terminal_id;
+    uint32_t user_pin;
+} holding_terminal_user_pin_request_t;
+
+typedef struct {                // 0x0200
+    uint16_t terminal_id;
+    uint16_t valid_pin;
+} input_terminal_valid_pin_response_t;
+
+typedef struct{                 // 0x0300
+    uint16_t terminal_id;
+    uint16_t ChargePointStatus;
+} input_charge_point_status_response_t;
+
+typedef struct{                 // 0x0400
+    uint16_t terminals_quantity;
+    uint16_t minute_value;
+    uint16_t min_charge_time;
+    uint16_t max_charge_time;
+    uint16_t step_charge_time;
+} input_attributes_response_t;
+
 
 #pragma pack(pop)
-
 #endif
