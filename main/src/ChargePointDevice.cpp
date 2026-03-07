@@ -5,15 +5,20 @@ static const char* TAG = "ChargePointDevice";
 
 ChargePointDevice::ChargePointDevice(uint8_t terminalId, MCP23017* hwExpander) 
     : m_terminalId(terminalId), m_status(ChargePointStatus::AVAILABLE), 
-      m_hwExpander(hwExpander), m_currentOtp(0) {
+      m_hwExpander(hwExpander), m_currentOtp(0), m_expectedMinutes(0) {
 }
 
 ChargePointDevice::~ChargePointDevice() {
     stopCharge();
 }
 
-void ChargePointDevice::setExpectedOtp(uint32_t otp) {
+void ChargePointDevice::setExpectedOtp(uint32_t otp, uint16_t expectedMinutes) {
     m_currentOtp = otp;
+    m_expectedMinutes = expectedMinutes;
+}
+
+uint16_t ChargePointDevice::getExpectedMinutes() const {
+    return m_expectedMinutes;
 }
 
 bool ChargePointDevice::validateOtp(uint32_t pin) {
