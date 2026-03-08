@@ -6,14 +6,19 @@
 #include "MCP23017.hpp"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include <functional>
 
 /**
  * @brief Orquestador de una terminal de carga individual.
  */
+using StatusChangedCallback = std::function<void(uint8_t, ChargePointStatus)>;
+
 class ChargePointDevice {
 public:
     ChargePointDevice(uint8_t terminalId, MCP23017* hwExpander);
     ~ChargePointDevice();
+
+    void setStatusCallback(StatusChangedCallback cb) { m_onStatusChanged = cb; }
 
     void setExpectedOtp(uint32_t otp, uint16_t expectedMinutes);
     bool validateOtp(uint32_t pin);
@@ -31,6 +36,7 @@ private:
     MCP23017* m_hwExpander;
     uint32_t m_currentOtp;
     uint16_t m_expectedMinutes;
+    StatusChangedCallback m_onStatusChanged = nullptr;
 
     static void taskControlCargaWrapper(void* pvParameters);
     void runChargeCycle(uint16_t minutes);

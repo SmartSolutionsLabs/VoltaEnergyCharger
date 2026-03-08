@@ -45,7 +45,7 @@ void ChargePointDevice::startCharge(uint16_t minutes) {
     char taskName[16];
     snprintf(taskName, sizeof(taskName), "chg_%d", m_terminalId);
 
-    xTaskCreate(ChargePointDevice::taskControlCargaWrapper, taskName, 2048, args, 5, NULL);
+    xTaskCreate(ChargePointDevice::taskControlCargaWrapper, taskName, 4096, args, 5, NULL);
 }
 
 void ChargePointDevice::stopCharge() {
@@ -86,6 +86,7 @@ void ChargePointDevice::runChargeCycle(uint16_t minutes) {
     ESP_LOGW(TAG, "🔌 [P%d] RELÉ ON - Tiempo: %u min", m_terminalId, minutes);
     
     m_status = ChargePointStatus::OCCUPIED;
+    if (m_onStatusChanged) m_onStatusChanged(m_terminalId, m_status);
 
     if (m_hwExpander) {
          m_hwExpander->digital_write(m_terminalId - 1, 1);
@@ -100,4 +101,5 @@ void ChargePointDevice::runChargeCycle(uint16_t minutes) {
     
     ESP_LOGW(TAG, "🏁 [P%d] RELÉ OFF - Carga completa", m_terminalId);
     m_status = ChargePointStatus::AVAILABLE;
+    if (m_onStatusChanged) m_onStatusChanged(m_terminalId, m_status);
 }
