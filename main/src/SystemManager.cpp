@@ -63,7 +63,17 @@ void SystemManager::init() {
         m_chargePoints[i] = new ChargePointDevice(i + 1, m_mcp);
     }
 
-    m_modbusCtrl = new ModbusController(0x01, this);
+    m_modbusCtrl = new ModbusController(0x01);
+    
+    // REGISTRO DE CALLBACKS usando Lambdas
+    m_modbusCtrl->setOnPriceRequest([this](uint16_t id, uint16_t mins) {
+        this->onPriceRequest(id, mins);
+    });
+
+    m_modbusCtrl->setOnPinValidation([this](uint16_t id, uint32_t pin) {
+        this->onPinValidationRequest(id, pin);
+    });
+
     m_modbusCtrl->init(48, 38, 115200);
 
     // Configuración base de Modbus

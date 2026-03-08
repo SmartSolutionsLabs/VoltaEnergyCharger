@@ -5,8 +5,8 @@
 
 static const char* TAG = "ModbusCtrl";
 
-ModbusController::ModbusController(uint8_t unitId, IModbusEventHandler* eventHandler)
-    : m_slave(unitId), m_eventHandler(eventHandler) {
+ModbusController::ModbusController(uint8_t unitId)
+    : m_slave(unitId) {
 }
 
 ModbusController::~ModbusController() {
@@ -61,8 +61,8 @@ void ModbusController::handleWriteEvent(uint16_t address, size_t size, void* add
             uint16_t mins = m_dataMap.price_req.req_minutes;
             m_dataMap.price_req.req_minutes = 0; // Clear it
             
-            if (m_eventHandler) {
-                m_eventHandler->onPriceRequest(id, mins);
+            if (m_onPriceRequest) {
+                m_onPriceRequest(id, mins);
             }
         }
     } 
@@ -72,8 +72,8 @@ void ModbusController::handleWriteEvent(uint16_t address, size_t size, void* add
             uint32_t pin = m_dataMap.pin_req.user_pin;
             m_dataMap.pin_req.user_pin = 0; // Clear it
 
-            if (m_eventHandler) {
-                m_eventHandler->onPinValidationRequest(id, pin);
+            if (m_onPinValidation) {
+                m_onPinValidation(id, pin);
             }
         }
     }

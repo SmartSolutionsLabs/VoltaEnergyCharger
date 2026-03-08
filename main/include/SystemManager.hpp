@@ -8,7 +8,7 @@
 
 #define NUM_TERMINALES 8
 
-class SystemManager : public IModbusEventHandler {
+class SystemManager {
 public:
     SystemManager(IPaymentProcessor* paymentProcessor);
     ~SystemManager();
@@ -16,9 +16,8 @@ public:
     void init();
     void run();
 
-    // From IModbusEventHandler
-    void onPriceRequest(uint16_t terminalId, uint16_t minutes) override;
-    void onPinValidationRequest(uint16_t terminalId, uint32_t pin) override;
+    void onPriceRequest(uint16_t terminalId, uint16_t minutes);
+    void onPinValidationRequest(uint16_t terminalId, uint32_t pin);
 
 private:
     IPaymentProcessor* m_paymentProcessor;
