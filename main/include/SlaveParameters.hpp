@@ -52,7 +52,7 @@ typedef struct{                //ESTRUCTURA USADA EN EL 0X0500
     uint16_t used_energy;
 } terminal_status_block_t;
 
-typedef struct{                // 0X0500
+typedef struct{                // 0X0200  por el tipo input
     terminal_status_block_t terminals[MAX_TERMINALS];
 } input_all_status_response_t;
 

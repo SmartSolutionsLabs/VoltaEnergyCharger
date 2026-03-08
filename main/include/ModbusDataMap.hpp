@@ -14,6 +14,7 @@ public:
     input_terminal_valid_pin_response_t     pin_res;            // 0x0200
     input_charge_point_status_response_t    cp_status_res;      // 0x0300
     input_attributes_response_t             attr_res;           // 0x0400 
+    input_all_status_response_t             all_stats;          // 0x0500
 
     ModbusDataMap();
 
