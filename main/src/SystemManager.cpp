@@ -59,13 +59,23 @@ void SystemManager::initHardware() {
 void SystemManager::init() {
     initHardware();
 
+    m_modbusCtrl = new ModbusController(0x01);
+    m_modbusCtrl->init(48, 38, 115200);
+
     for (int i = 0; i < NUM_TERMINALES; i++) {
         m_chargePoints[i] = new ChargePointDevice(i + 1, m_mcp);
+        
+        // Registro del callback para actualizar el mapa de Modbus automáticamente
+        m_chargePoints[i]->setStatusCallback([this](uint8_t id, ChargePointStatus status) {
+            if (m_modbusCtrl) {
+                ModbusDataMap& map = m_modbusCtrl->getDataMap();
+                map.all_stats.terminals[id - 1].status = static_cast<uint16_t>(status);
+                ESP_LOGI(TAG, "📢 [ID %d] Modbus Status Updated: %d", id, (int)status);
+            }
+        });
     }
-
-    m_modbusCtrl = new ModbusController(0x01);
     
-    // REGISTRO DE CALLBACKS usando Lambdas
+    // REGISTRO DE CALLBACKS usando Lambdas para Modbus
     m_modbusCtrl->setOnPriceRequest([this](uint16_t id, uint16_t mins) {
         this->onPriceRequest(id, mins);
     });
@@ -73,8 +83,6 @@ void SystemManager::init() {
     m_modbusCtrl->setOnPinValidation([this](uint16_t id, uint32_t pin) {
         this->onPinValidationRequest(id, pin);
     });
-
-    m_modbusCtrl->init(48, 38, 115200);
 
     // Configuración base de Modbus
     ModbusDataMap& map = m_modbusCtrl->getDataMap();
@@ -160,5 +168,6 @@ void SystemManager::onPinValidationRequest(uint16_t terminalId, uint32_t pin) {
         ESP_LOGE(TAG, "❌ PIN INCORRECTO P%d", terminalId);
         map.pin_res.valid_pin = 0;
         map.status_res.work_status = static_cast<uint16_t>(SignatureWorkStatus::DONE);
+        map.all_stats.terminals[terminalId - 1].status = static_cast<uint16_t>(ChargePointStatus::FAULT);
     }
 }
